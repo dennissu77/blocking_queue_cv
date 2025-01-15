@@ -39,41 +39,34 @@ void producer(int total_items, int produce_interval_ns) {
 // 消費者
 void consumer() {
     while (true) {
-        std::unique_lock<std::mutex> lock(g_mtx);
-        g_cv.wait(lock, [] { return !g_queue.empty() || g_done.load(); });
+        int item = -1;  // 初始化 item
+        std::chrono::high_resolution_clock::time_point notify_time;
 
-        while (!g_queue.empty()) {
-            int item = g_queue.front();
-            g_queue.pop();
+        // 將取出任務與讀取通知時間包成一個區塊
+        {
+            std::unique_lock<std::mutex> lock(g_mtx);
+            g_cv.wait(lock, [] { return !g_queue.empty() || g_done.load(); });
 
-            auto notify_time = g_notify_times[item];// 要在鎖中讀取 g_notify_times
-
-            lock.unlock();
-
-            /// ===============
-            //  車用儀表板渲染區域 
-            /// ===============
-
-            // 計算響應時間
-            // g_consume_times[item] = std::chrono::high_resolution_clock::now();  // 記錄處理時間
-            // auto consume_time = g_consume_times[item];// 如果有多個consumer的話也要在鎖內，目前是單一consumer
-
-            auto consume_time =  std::chrono::high_resolution_clock::now();  // 記錄處理時間
-            auto latency = std::chrono::duration_cast<std::chrono::nanoseconds>(consume_time - notify_time).count();
-            // notify_time 如果有多個consumer的話也要在鎖內，目前是單一consumer
-
-            std::cout << "[Consumer] Consumed item: " << item
-                      << " | Latency: " << latency << " ns" << std::endl;
-
-            lock.lock();
-
-            //
+            if (!g_queue.empty()) {
+                item = g_queue.front();
+                g_queue.pop();
+                notify_time = g_notify_times[item];
+            } else if (g_done.load()) {
+                std::cout << "[Consumer] No more items. Exiting..." << std::endl;
+                break;
+            }
         }
 
-        if (g_done.load() && g_queue.empty()) {
-            std::cout << "[Consumer] No more items. Exiting..." << std::endl;
-            break;
-        }
+        // ============================
+        //   車用儀表板渲染區域 
+        // ============================
+
+        // 記錄消費時間並計算延遲
+        auto consume_time = std::chrono::high_resolution_clock::now();
+        auto latency = std::chrono::duration_cast<std::chrono::nanoseconds>(consume_time - notify_time).count();
+
+        std::cout << "[Consumer] Consumed item: " << item
+                  << " | Latency: " << latency << " ns" << std::endl;
     }
 }
 
