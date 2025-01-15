@@ -15,7 +15,7 @@ std::atomic<bool> g_done(false);
 
 // 記錄 Producer 通知時間與 Consumer 處理時間
 std::unordered_map<int, std::chrono::high_resolution_clock::time_point> g_notify_times;
-std::unordered_map<int, std::chrono::high_resolution_clock::time_point> g_consume_times;
+//std::unordered_map<int, std::chrono::high_resolution_clock::time_point> g_consume_times;
 
 // 生產者
 void producer(int total_items, int produce_interval_ns) {
@@ -55,9 +55,12 @@ void consumer() {
             /// ===============
 
             // 計算響應時間
-            auto consume_time = g_consume_times[item];// 如果有多個consumer的話也要在鎖內，目前是單一consumer
-            g_consume_times[item] = std::chrono::high_resolution_clock::now();  // 記錄處理時間
+            // g_consume_times[item] = std::chrono::high_resolution_clock::now();  // 記錄處理時間
+            // auto consume_time = g_consume_times[item];// 如果有多個consumer的話也要在鎖內，目前是單一consumer
+
+            auto consume_time =  std::chrono::high_resolution_clock::now();  // 記錄處理時間
             auto latency = std::chrono::duration_cast<std::chrono::nanoseconds>(consume_time - notify_time).count();
+            // notify_time 如果有多個consumer的話也要在鎖內，目前是單一consumer
 
             std::cout << "[Consumer] Consumed item: " << item
                       << " | Latency: " << latency << " ns" << std::endl;
