@@ -31,7 +31,7 @@ void producer(int total_items, int produce_interval_ns) {
         std::this_thread::sleep_for(std::chrono::nanoseconds(produce_interval_ns));
     }
 
-    g_done.store(true);
+    g_done.store(true); // 如果不需要消費者在生產者結束後終止可以取消這段
     g_cv.notify_all();
     std::cout << "[Producer] Production done." << std::endl;
 }
@@ -45,13 +45,13 @@ void consumer() {
         // 將取出任務與讀取通知時間包成一個區塊
         {
             std::unique_lock<std::mutex> lock(g_mtx);
-            g_cv.wait(lock, [] { return !g_queue.empty() || g_done.load(); });
+            g_cv.wait(lock, [] { return !g_queue.empty() || g_done.load(); }); // 如果queue是空的但生產者沒有結束則阻塞在這 os會讓thread sleep
 
             if (!g_queue.empty()) {
-                item = g_queue.front();
+                item = g_queue.front(); // 取出queue中的物件
                 g_queue.pop();
-                notify_time = g_notify_times[item];
-            } else if (g_done.load()) {
+                notify_time = g_notify_times[item]; // 取出記錄的通知時間 因爲是共享變數所以需要放在索內
+            } else if (g_done.load()) { 
                 std::cout << "[Consumer] No more items. Exiting..." << std::endl;
                 break;
             }
