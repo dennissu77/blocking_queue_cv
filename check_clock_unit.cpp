@@ -1,6 +1,12 @@
 #include <iostream>
 #include <chrono>
 
+
+
+//high_resolution_clock 單位是 奈秒(nanoseconds)
+// g++ -std=c++14 -O2 -o check_clock_unit check_clock_unit.cpp
+// ./check_clock_unit
+
 int main() {
     using namespace std::chrono;
 
